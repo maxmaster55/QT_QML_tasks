@@ -29,7 +29,7 @@ Item {
 
         LineText {
             item: "Author"
-            value: "Youssef Elkashef"
+            value: "Youssef"
         }
 
         Button{
