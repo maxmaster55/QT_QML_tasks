@@ -16,6 +16,7 @@ qt_add_qml_module(appt03_netman
     URI t03_netman
     QML_FILES
         Main.qml
+        QML_FILES TabEnableButton.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
