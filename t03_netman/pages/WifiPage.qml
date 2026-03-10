@@ -1,8 +1,10 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Material
+import t03_netman
 
 Rectangle {
+    id: root
     ColumnLayout {
         anchors.fill: parent
 
@@ -18,13 +20,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            model: [
-                {
-                    name: "test",
-                    is_secured: false,
-                    strength: 50
-                }
-            ]
+            model: wifiController.networks
             delegate: DeviceElement {}
         }
     }

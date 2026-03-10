@@ -70,14 +70,27 @@ void WifiController::setWifiEnabled(bool enabled)
     m_nm->setProperty("WirelessEnabled", enabled);
 }
 
-bool WifiController::wifiEnabled() const
-{
-    return m_wifiEnabled;
-}
-
 void WifiController::connectToNetwork(const QString &ssid, const QString &password)
 {
 }
+
 void WifiController::scanNetworks()
 {
+
+    qDebug() << "Scan called from qml";
+    m_networks.clear();
+
+    QVariantMap net;
+
+    net["name"] = "HomeWifi";
+    net["strength"] = 80;
+    net["is_secured"] = true;
+    m_networks.append(net);
+
+    net["name"] = "CoffeeShop";
+    net["strength"] = 55;
+    net["is_secured"] = false;
+    m_networks.append(net);
+
+    emit networksChanged();
 }

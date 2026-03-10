@@ -10,16 +10,17 @@ class WifiController : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
-    Q_PROPERTY(bool wifiEnabled READ wifiEnabled WRITE setWifiEnabled NOTIFY wifiEnabledChanged)
+    Q_PROPERTY(bool wifiEnabled MEMBER m_wifiEnabled WRITE setWifiEnabled NOTIFY wifiEnabledChanged)
+    Q_PROPERTY(QVariantList networks MEMBER m_networks NOTIFY networksChanged)
 
 private:
     QDBusConnection m_bus;
     QDBusInterface *m_nm;
     bool m_wifiEnabled = false;
+    QVariantList m_networks;
 
 public:
     explicit WifiController(QObject *parent = nullptr);
-    bool wifiEnabled() const;
     void setWifiEnabled(bool enabled);
 
     Q_INVOKABLE void connectToNetwork(const QString &ssid, const QString &password);
@@ -27,6 +28,7 @@ public:
 
 signals:
     void wifiEnabledChanged(bool enabled);
+    void networksChanged();
 
 private slots:
     void onPropertiesChanged(QString interface, QVariantMap changed, QStringList invalidated);
