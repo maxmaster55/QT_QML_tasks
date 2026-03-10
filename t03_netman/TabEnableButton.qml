@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-
 TabButton {
     id: root
     property int margin: 16
@@ -11,22 +10,24 @@ TabButton {
 
     signal switchToggled(bool is_checked)
 
-    contentItem: RowLayout{
+    contentItem: RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: margin
-        anchors.rightMargin: margin
+        anchors.leftMargin: root.margin
+        anchors.rightMargin: root.margin
 
         Text {
-            Layout.alignment: Qt.AlignLeft
             id: tab_text
+            Layout.alignment: Qt.AlignLeft
         }
         // spacer
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
 
         Switch {
             id: wifi_switch
             Layout.alignment: Qt.AlignRight
-            onToggled: switchToggled(checked)
+            onToggled: root.switchToggled(checked)
         }
     }
 }
