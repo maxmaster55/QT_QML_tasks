@@ -21,9 +21,10 @@ qt_add_qml_module(appt03_netman
     URI t03_netman
     QML_FILES
         Main.qml
-        TabEnableButton.qml
         pages/WifiPage.qml
         pages/BtPage.qml
+        components/TabEnableButton.qml
+        components/DeviceElement.qml
     SOURCES
         controllers/wifi/wificontroller.cpp
         controllers/wifi/wificontroller.h
