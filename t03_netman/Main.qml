@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Material
+import t03_netman
 
 Window {
     width: 640
@@ -8,6 +9,22 @@ Window {
     visible: true
     title: qsTr("Hello World")
     Material.accent: Material.Blue
+
+    WifiController {
+        id: wifiController
+    }
+
+    Timer {
+        interval: 2000
+        repeat: true
+        running: true
+
+        onTriggered: {
+            if (true) {
+                wifiController.scanNetworks();
+            }
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -17,9 +34,17 @@ Window {
             id: tabBar
             Layout.fillWidth: true
 
-
-            TabEnableButton { label: "Wifi" }
-            TabEnableButton { label: "Bluetooth" }
+            TabEnableButton {
+                id: wifiSwitch
+                label: "Wifi"
+                switchChecked: wifiController.wifiEnabled
+                onSwitchToggled: is_checked => {
+                    wifiController.wifiEnabled = is_checked;
+                }
+            }
+            TabEnableButton {
+                label: "Bluetooth"
+            }
         }
 
         StackLayout {
@@ -27,22 +52,11 @@ Window {
             Layout.fillHeight: true
             currentIndex: tabBar.currentIndex
 
-            // Wifi
-            Rectangle {
-                color: "lightblue"
-                ProgressBar{
-                    width: parent.width
-                    indeterminate: true
-                }
-                Text { anchors.centerIn: parent; text: "Wifi Page" }
-            }
+            // Wifi page
+            WifiPage {}
 
-            // Bt
-            Rectangle {
-                color: "lightgreen"
-                Text { anchors.centerIn: parent; text: "BT page" }
-            }
+            // Bluetooth page
+            BtPage {}
         }
     }
-
 }

@@ -4,19 +4,29 @@ project(t03_netman VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick DBus)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
+
 qt_add_executable(appt03_netman
     main.cpp
+)
+target_include_directories(appt03_netman PRIVATE 
+    controllers/wifi
+    controllers/bt
 )
 
 qt_add_qml_module(appt03_netman
     URI t03_netman
     QML_FILES
         Main.qml
-        QML_FILES TabEnableButton.qml
+        TabEnableButton.qml
+        pages/WifiPage.qml
+        pages/BtPage.qml
+    SOURCES
+        controllers/wifi/wificontroller.cpp
+        controllers/wifi/wificontroller.h
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -31,7 +41,7 @@ set_target_properties(appt03_netman PROPERTIES
 )
 
 target_link_libraries(appt03_netman
-    PRIVATE Qt6::Quick
+    PRIVATE Qt6::Quick Qt6::DBus
 )
 
 include(GNUInstallDirs)
