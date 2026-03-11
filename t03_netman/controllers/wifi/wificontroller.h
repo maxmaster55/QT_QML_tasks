@@ -18,6 +18,7 @@ private:
     QDBusInterface *m_nm;
     bool m_wifiEnabled = false;
     QVariantList m_networks;
+    QString m_wifiDevicePath;
 
 public:
     explicit WifiController(QObject *parent = nullptr);
@@ -26,12 +27,17 @@ public:
     Q_INVOKABLE void connectToNetwork(const QString &ssid, const QString &password);
     Q_INVOKABLE void scanNetworks();
 
+private:
+    QString getWirelessDevice();
+
 signals:
     void wifiEnabledChanged(bool enabled);
     void networksChanged();
 
 private slots:
     void onPropertiesChanged(QString interface, QVariantMap changed, QStringList invalidated);
+    void onAccessPointAdded(QDBusObjectPath path);
+    void onAccessPointRemoved(QDBusObjectPath path);
 };
 
 #endif // WIFICONTROLLER_H
