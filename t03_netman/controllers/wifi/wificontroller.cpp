@@ -9,13 +9,13 @@ namespace NM
     constexpr const char *PROP_INTERFACE = "org.freedesktop.DBus.Properties";
     constexpr const char *DEVICE_INTERFACE = "org.freedesktop.NetworkManager.Device";
     constexpr const char *WIFI_DEVICE_INTERFACE = "org.freedesktop.NetworkManager.Device.Wireless";
+    constexpr const char *AP_INTERFACE = "org.freedesktop.NetworkManager.AccessPoint";
     constexpr const char *WIRELESS_ENABLED = "WirelessEnabled";
     constexpr const char *PROP_CHANGED = "PropertiesChanged";
     constexpr const char *WIFI_NETWORK_ADDED = "AccessPointAdded";
     constexpr const char *WIFI_NETWORK_REMOVED = "AccessPointRemoved";
     constexpr const char *FUNC_GET_ALL_DEVICES = "GetAllDevices";
     constexpr const char *DEVICE_TYPE = "DeviceType";
-    constexpr const char *FUNC_GET_ALL_DEVICES = "GetAllDevices";
     constexpr const char *FUNC_REQ_SCAN = "RequestScan";
 }
 
@@ -31,7 +31,7 @@ WifiController::WifiController(QObject *parent)
         NM::NM_SERVICE,
         NM::NM_PATH,
         NM::NM_INTERFACE,
-        QDBusConnection::systemBus());
+        m_bus);
 
     if (!m_nm->isValid())
     {
@@ -139,9 +139,64 @@ QString WifiController::getWirelessDevice()
 
 void WifiController::onAccessPointAdded(QDBusObjectPath path)
 {
-    qDebug() << "access point added: " << path;
+    const QString apPath = path.path();
+    qDebug() << "access point added:" << apPath;
+
+    QVariantMap info = getAccessPointInfo(apPath);
+    if (!info.isEmpty())
+    {
+        m_apCache.insert(apPath, info);
+        rebuildNetworksList();
+    }
 }
+
 void WifiController::onAccessPointRemoved(QDBusObjectPath path)
 {
-    qDebug() << "access point removed " << path;
+    const QString apPath = path.path();
+    qDebug() << "access point removed:" << apPath;
+
+    if (m_apCache.remove(apPath) > 0)
+        rebuildNetworksList();
+}
+
+QVariantMap WifiController::getAccessPointInfo(const QString &apPath)
+{
+    QDBusInterface ap(
+        NM::NM_SERVICE,
+        apPath,
+        NM::AP_INTERFACE,
+        m_bus);
+
+    if (!ap.isValid())
+        return {};
+
+    // SSID comes as a byte array — convert to QString
+    QByteArray ssidBytes = ap.property("Ssid").toByteArray();
+    QString ssid = QString::fromUtf8(ssidBytes);
+
+    uint strength = ap.property("Strength").toUInt();
+    uint frequency = ap.property("Frequency").toUInt();
+    uint rsnFlags = ap.property("RsnFlags").toUInt();
+    uint wpaFlags = ap.property("WpaFlags").toUInt();
+
+    bool secured = (rsnFlags != 0 || wpaFlags != 0);
+
+    return QVariantMap{
+        {"name", ssid},
+        {"strength", strength},
+        {"frequency", frequency},
+        {"is_secured", secured},
+        {"path", apPath}};
+}
+
+void WifiController::rebuildNetworksList()
+{
+    m_networks.clear();
+    for (const QVariantMap &info : m_apCache)
+    {
+        // Skip APs with empty SSID (hidden networks)
+        if (!info["name"].toString().isEmpty())
+            m_networks.append(info);
+    }
+    emit networksChanged();
 }

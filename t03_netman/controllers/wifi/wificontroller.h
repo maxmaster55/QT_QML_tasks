@@ -19,6 +19,7 @@ private:
     bool m_wifiEnabled = false;
     QVariantList m_networks;
     QString m_wifiDevicePath;
+    QMap<QString, QVariantMap> m_apCache;
 
 public:
     explicit WifiController(QObject *parent = nullptr);
@@ -29,6 +30,8 @@ public:
 
 private:
     QString getWirelessDevice();
+    QVariantMap getAccessPointInfo(const QString &apPath);
+    void rebuildNetworksList();
 
 signals:
     void wifiEnabledChanged(bool enabled);
