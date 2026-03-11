@@ -1,12 +1,23 @@
 #include "wificontroller.h"
 #include <QDebug>
 
-QString NM_SERVICE = "org.freedesktop.NetworkManager";
-QString NM_PATH = "/org/freedesktop/NetworkManager";
-QString NM_INTERFACE = "org.freedesktop.NetworkManager";
-QString NM_PROP_INTERFACE = "org.freedesktop.DBus.Properties";
-
-QString NM_WIRELESS_ENABLED = "WirelessEnabled";
+namespace NM
+{
+    constexpr const char *NM_SERVICE = "org.freedesktop.NetworkManager";
+    constexpr const char *NM_PATH = "/org/freedesktop/NetworkManager";
+    constexpr const char *NM_INTERFACE = "org.freedesktop.NetworkManager";
+    constexpr const char *PROP_INTERFACE = "org.freedesktop.DBus.Properties";
+    constexpr const char *DEVICE_INTERFACE = "org.freedesktop.NetworkManager.Device";
+    constexpr const char *WIFI_DEVICE_INTERFACE = "org.freedesktop.NetworkManager.Device.Wireless";
+    constexpr const char *WIRELESS_ENABLED = "WirelessEnabled";
+    constexpr const char *PROP_CHANGED = "PropertiesChanged";
+    constexpr const char *WIFI_NETWORK_ADDED = "AccessPointAdded";
+    constexpr const char *WIFI_NETWORK_REMOVED = "AccessPointRemoved";
+    constexpr const char *FUNC_GET_ALL_DEVICES = "GetAllDevices";
+    constexpr const char *DEVICE_TYPE = "DeviceType";
+    constexpr const char *FUNC_GET_ALL_DEVICES = "GetAllDevices";
+    constexpr const char *FUNC_REQ_SCAN = "RequestScan";
+}
 
 WifiController::WifiController(QObject *parent)
     : QObject{parent}, m_bus{QDBusConnection::systemBus()}
@@ -17,9 +28,9 @@ WifiController::WifiController(QObject *parent)
     }
 
     m_nm = new QDBusInterface(
-        NM_SERVICE,
-        NM_PATH,
-        NM_INTERFACE,
+        NM::NM_SERVICE,
+        NM::NM_PATH,
+        NM::NM_INTERFACE,
         QDBusConnection::systemBus());
 
     if (!m_nm->isValid())
@@ -27,19 +38,33 @@ WifiController::WifiController(QObject *parent)
         qDebug() << "NetworkManager interface invalid";
     }
 
-    m_wifiEnabled = m_nm->property("WirelessEnabled").toBool();
-    QTimer::singleShot(0, this, [this]()
-                       {
+    m_wifiEnabled = m_nm->property(NM::WIRELESS_ENABLED).toBool();
+    m_wifiDevicePath = getWirelessDevice();
+
+    QTimer::singleShot(
+        0,
+        this,
+        [this]()
+        {
         emit wifiEnabledChanged(m_wifiEnabled);
         qDebug() << "wifi on startup is: " << m_wifiEnabled; });
 
-    m_bus.connect(
-        NM_SERVICE,
-        NM_PATH,
-        NM_PROP_INTERFACE,
-        "PropertiesChanged",
-        this,
-        SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
+    m_bus.connect(NM::NM_SERVICE, NM::NM_PATH,
+                  NM::PROP_INTERFACE,
+                  NM::PROP_CHANGED,
+                  this,
+                  SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
+
+    m_bus.connect(NM::NM_SERVICE, m_wifiDevicePath,
+                  NM::WIFI_DEVICE_INTERFACE,
+                  NM::WIFI_NETWORK_ADDED,
+                  this,
+                  SLOT(onAccessPointAdded(QDBusObjectPath)));
+
+    m_bus.connect(NM::NM_SERVICE, m_wifiDevicePath, NM::WIFI_DEVICE_INTERFACE,
+                  NM::WIFI_NETWORK_REMOVED,
+                  this,
+                  SLOT(onAccessPointRemoved(QDBusObjectPath)));
 }
 
 void WifiController::onPropertiesChanged(QString interface,
@@ -49,9 +74,9 @@ void WifiController::onPropertiesChanged(QString interface,
     Q_UNUSED(interface)
     Q_UNUSED(invalidated)
 
-    if (changed.contains(NM_WIRELESS_ENABLED))
+    if (changed.contains(NM::WIRELESS_ENABLED))
     {
-        bool enabled = changed[NM_WIRELESS_ENABLED].toBool();
+        bool enabled = changed[NM::WIRELESS_ENABLED].toBool();
         if (m_wifiEnabled != enabled)
         {
             m_wifiEnabled = enabled;
@@ -67,7 +92,7 @@ void WifiController::setWifiEnabled(bool enabled)
     if (!m_nm->isValid())
         return;
 
-    m_nm->setProperty("WirelessEnabled", enabled);
+    m_nm->setProperty(NM::WIRELESS_ENABLED, enabled);
 }
 
 void WifiController::connectToNetwork(const QString &ssid, const QString &password)
@@ -76,21 +101,47 @@ void WifiController::connectToNetwork(const QString &ssid, const QString &passwo
 
 void WifiController::scanNetworks()
 {
+    QDBusInterface wireless(
+        NM::NM_SERVICE,
+        m_wifiDevicePath,
+        NM::WIFI_DEVICE_INTERFACE,
+        m_bus);
 
-    qDebug() << "Scan called from qml";
-    m_networks.clear();
-
-    QVariantMap net;
-
-    net["name"] = "HomeWifi";
-    net["strength"] = 80;
-    net["is_secured"] = true;
-    m_networks.append(net);
-
-    net["name"] = "CoffeeShop";
-    net["strength"] = 55;
-    net["is_secured"] = false;
-    m_networks.append(net);
+    wireless.call(NM::FUNC_REQ_SCAN, QVariantMap());
 
     emit networksChanged();
+}
+
+QString WifiController::getWirelessDevice()
+{
+    QDBusReply<QList<QDBusObjectPath>> msg = m_nm->call(NM::FUNC_GET_ALL_DEVICES);
+    if (!msg.isValid())
+    {
+        exit(1);
+    }
+
+    for (const QDBusObjectPath &path : msg.value())
+    {
+        QDBusInterface device(
+            NM::NM_SERVICE,
+            path.path(),
+            NM::DEVICE_INTERFACE,
+            m_bus);
+
+        if (device.property(NM::DEVICE_TYPE).toUInt() == 2)
+        {
+            return path.path();
+        }
+    }
+
+    return "";
+}
+
+void WifiController::onAccessPointAdded(QDBusObjectPath path)
+{
+    qDebug() << "access point added: " << path;
+}
+void WifiController::onAccessPointRemoved(QDBusObjectPath path)
+{
+    qDebug() << "access point removed " << path;
 }
