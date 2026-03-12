@@ -14,6 +14,10 @@ Window {
         id: wifiController
     }
 
+    BtController {
+        id: btController
+    }
+    // wifi scan timer
     Timer {
         interval: 5000
         repeat: true
@@ -22,6 +26,18 @@ Window {
         onTriggered: {
             if (wifiController.wifiEnabled) {
                 wifiController.scanNetworks();
+            }
+        }
+    }
+    // bt scan timer
+    Timer {
+        interval: 2000
+        repeat: true
+        running: true
+
+        onTriggered: {
+            if (btController.btEnabled) {
+                btController.scanDevices();
             }
         }
     }
@@ -43,7 +59,12 @@ Window {
                 }
             }
             TabEnableButton {
+                id: btSwitch
                 label: "Bluetooth"
+                switchChecked: btController.btEnabled
+                onSwitchToggled: is_checked => {
+                    btController.btEnabled = is_checked;
+                }
             }
         }
 

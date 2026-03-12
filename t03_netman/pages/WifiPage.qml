@@ -22,7 +22,7 @@ Rectangle {
             Layout.fillHeight: true
             clip: true
             model: wifiController.networks
-            delegate: DeviceElement {}
+            delegate: WifiElement {}
         }
     }
 }

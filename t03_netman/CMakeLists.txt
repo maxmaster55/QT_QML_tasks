@@ -24,7 +24,8 @@ qt_add_qml_module(appt03_netman
         pages/WifiPage.qml
         pages/BtPage.qml
         components/TabEnableButton.qml
-        components/DeviceElement.qml
+        components/WifiElement.qml
+        components/BtElement.qml
     SOURCES
         controllers/wifi/wificontroller.cpp
         controllers/wifi/wificontroller.h
