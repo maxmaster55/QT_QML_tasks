@@ -183,6 +183,12 @@ void BtController::onPropertiesChanged(QString interface,
             m_btEnabled = enabled;
             qDebug() << "bt changed from system to:" << m_btEnabled;
             emit btEnabledChanged(m_btEnabled);
+
+            if (!m_btEnabled)
+            {
+                m_devices.clear();
+                emit devicesChanged();
+            }
         }
     }
 
