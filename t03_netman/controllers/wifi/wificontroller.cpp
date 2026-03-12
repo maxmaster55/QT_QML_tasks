@@ -1,5 +1,6 @@
 #include "wificontroller.h"
 #include <QDebug>
+#include <algorithm>
 
 namespace NM
 {
@@ -16,7 +17,9 @@ namespace NM
     constexpr const char *WIFI_NETWORK_REMOVED = "AccessPointRemoved";
     constexpr const char *FUNC_GET_ALL_DEVICES = "GetAllDevices";
     constexpr const char *DEVICE_TYPE = "DeviceType";
+    constexpr const char *LAST_SCAN = "LastScan";
     constexpr const char *FUNC_REQ_SCAN = "RequestScan";
+    constexpr const char *FUNC_GET_APS = "GetAccessPoints";
 }
 
 WifiController::WifiController(QObject *parent)
@@ -65,6 +68,17 @@ WifiController::WifiController(QObject *parent)
                   NM::WIFI_NETWORK_REMOVED,
                   this,
                   SLOT(onAccessPointRemoved(QDBusObjectPath)));
+    m_bus.connect(NM::NM_SERVICE, m_wifiDevicePath,
+                  NM::PROP_INTERFACE,
+                  NM::PROP_CHANGED,
+                  this,
+                  SLOT(onDevicePropertiesChanged(QString, QVariantMap, QStringList)));
+
+    if (m_wifiEnabled)
+    {
+        loadInitialAccessPoints();
+        scanNetworks();
+    }
 }
 
 void WifiController::onPropertiesChanged(QString interface,
@@ -80,9 +94,26 @@ void WifiController::onPropertiesChanged(QString interface,
         if (m_wifiEnabled != enabled)
         {
             m_wifiEnabled = enabled;
-            emit wifiEnabledChanged(m_wifiEnabled);
             qDebug() << "wifi changed from system to: " << m_wifiEnabled;
+            emit wifiEnabledChanged(m_wifiEnabled);
         }
+    }
+}
+void WifiController::onDevicePropertiesChanged(QString interface,
+                                               QVariantMap changed,
+                                               QStringList invalidated)
+{
+    Q_UNUSED(invalidated)
+
+    if (interface != NM::WIFI_DEVICE_INTERFACE)
+        return;
+
+    if (changed.contains(NM::LAST_SCAN))
+    {
+        m_scanning = false;
+        emit scanningChanged(false);
+
+        qDebug() << "scan finished";
     }
 }
 
@@ -106,10 +137,10 @@ void WifiController::scanNetworks()
         m_wifiDevicePath,
         NM::WIFI_DEVICE_INTERFACE,
         m_bus);
+    m_scanning = true;
+    emit scanningChanged(true);
 
     wireless.call(NM::FUNC_REQ_SCAN, QVariantMap());
-
-    emit networksChanged();
 }
 
 QString WifiController::getWirelessDevice()
@@ -192,11 +223,50 @@ QVariantMap WifiController::getAccessPointInfo(const QString &apPath)
 void WifiController::rebuildNetworksList()
 {
     m_networks.clear();
+
     for (const QVariantMap &info : m_apCache)
     {
-        // Skip APs with empty SSID (hidden networks)
         if (!info["name"].toString().isEmpty())
             m_networks.append(info);
     }
+
+    std::sort(m_networks.begin(), m_networks.end(),
+              [](const QVariant &a, const QVariant &b)
+              {
+                  int strengthA = a.toMap()["strength"].toInt();
+                  int strengthB = b.toMap()["strength"].toInt();
+
+                  return strengthA > strengthB; // descending (strongest first)
+              });
+
     emit networksChanged();
+}
+
+void WifiController::loadInitialAccessPoints()
+{
+    QDBusInterface wireless(
+        NM::NM_SERVICE,
+        m_wifiDevicePath,
+        NM::WIFI_DEVICE_INTERFACE,
+        m_bus);
+
+    QDBusReply<QList<QDBusObjectPath>> reply =
+        wireless.call(NM::FUNC_GET_APS);
+
+    if (!reply.isValid())
+    {
+        qDebug() << "Failed to get access points";
+        return;
+    }
+
+    for (const QDBusObjectPath &path : reply.value())
+    {
+        QString apPath = path.path();
+
+        QVariantMap info = getAccessPointInfo(apPath);
+        if (!info.isEmpty())
+            m_apCache.insert(apPath, info);
+    }
+
+    rebuildNetworksList();
 }
