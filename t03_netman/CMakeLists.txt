@@ -28,6 +28,9 @@ qt_add_qml_module(appt03_netman
     SOURCES
         controllers/wifi/wificontroller.cpp
         controllers/wifi/wificontroller.h
+
+        controllers/bt/btcontroller.cpp
+        controllers/bt/btcontroller.h
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
