@@ -36,6 +36,7 @@ private:
     QVariantMap getAccessPointInfo(const QString &apPath);
     void rebuildNetworksList();
     void loadInitialAccessPoints();
+    QString findSavedConnection(const QString &ssid);
 
 signals:
     void wifiEnabledChanged(bool enabled);

@@ -5,10 +5,11 @@ import QtQuick.Layouts
 Rectangle {
     id: root
 
-    required property int index
-    required property string name
-    required property bool is_secured
-    required property int strength
+    // removed "required" so delegate context vars can bind
+    property int index: 0
+    property string name: ""
+    property bool is_secured: false
+    property int strength: 0
 
     signal connectClicked(string name)
 
@@ -22,21 +23,17 @@ Rectangle {
         spacing: 8
 
         Column {
+            Layout.fillWidth: true
+
             Text {
-                text: if (root.name === "")
-                    "Hidden Network"
-                else
-                    root.name
+                text: root.name === "" ? "Hidden Network" : root.name
                 font.pixelSize: 16
             }
             Text {
-                text: `Security: ${root.is_secured ? " Locked" : "Open"}`
+                text: `Security: ${root.is_secured ? "🔒 Locked" : "Open"}`
                 font.pixelSize: 12
+                color: root.is_secured ? "#888" : "#2e7d32"
             }
-        }
-
-        Item {
-            Layout.fillWidth: true
         }
 
         Text {
@@ -47,9 +44,7 @@ Rectangle {
         Button {
             text: "Connect"
             Layout.alignment: Qt.AlignVCenter
-            onClicked: {
-                root.connectClicked(root.name);
-            }
+            onClicked: root.connectClicked(root.name)
         }
     }
 }

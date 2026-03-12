@@ -20,6 +20,13 @@ namespace NM
     constexpr const char *LAST_SCAN = "LastScan";
     constexpr const char *FUNC_REQ_SCAN = "RequestScan";
     constexpr const char *FUNC_GET_APS = "GetAccessPoints";
+    constexpr const char *SETTINGS_SERVICE = "org.freedesktop.NetworkManager";
+    constexpr const char *SETTINGS_PATH = "/org/freedesktop/NetworkManager/Settings";
+    constexpr const char *SETTINGS_INTERFACE = "org.freedesktop.NetworkManager.Settings";
+    constexpr const char *CONN_INTERFACE = "org.freedesktop.NetworkManager.Settings.Connection";
+    constexpr const char *FUNC_LIST_CONNS = "ListConnections";
+    constexpr const char *FUNC_GET_SETTINGS = "GetSettings";
+    constexpr const char *FUNC_ACTIVATE_CONN = "ActivateConnection";
 }
 
 WifiController::WifiController(QObject *parent)
@@ -124,10 +131,6 @@ void WifiController::setWifiEnabled(bool enabled)
         return;
 
     m_nm->setProperty(NM::WIRELESS_ENABLED, enabled);
-}
-
-void WifiController::connectToNetwork(const QString &ssid, const QString &password)
-{
 }
 
 void WifiController::scanNetworks()
@@ -269,4 +272,123 @@ void WifiController::loadInitialAccessPoints()
     }
 
     rebuildNetworksList();
+}
+
+void WifiController::connectToNetwork(const QString &ssid, const QString &password)
+{
+    // Find the AP path from cache by SSID
+    QString apPath;
+    for (auto it = m_apCache.begin(); it != m_apCache.end(); ++it)
+    {
+        if (it.value()["name"].toString() == ssid)
+        {
+            apPath = it.value()["path"].toString();
+            break;
+        }
+    }
+
+    if (apPath.isEmpty())
+    {
+        qWarning() << "Could not find AP path for SSID:" << ssid;
+        return;
+    }
+
+    // ✅ Check if a saved connection already exists for this SSID
+    QString existingConnPath = findSavedConnection(ssid);
+
+    if (!existingConnPath.isEmpty())
+    {
+        qDebug() << "Found existing connection for" << ssid << "— activating directly";
+
+        QDBusReply<QDBusObjectPath> reply = m_nm->call(
+            NM::FUNC_ACTIVATE_CONN,
+            QVariant::fromValue(QDBusObjectPath(existingConnPath)),
+            QVariant::fromValue(QDBusObjectPath(m_wifiDevicePath)),
+            QVariant::fromValue(QDBusObjectPath("/")) // specific AP — let NM pick
+        );
+
+        if (!reply.isValid())
+            qWarning() << "ActivateConnection failed:" << reply.error().message();
+        else
+            qDebug() << "Activating saved connection:" << reply.value().path();
+
+        return;
+    }
+
+    // No saved connection — create a new one
+    QMap<QString, QVariantMap> connectionSettings;
+
+    connectionSettings["connection"] = {
+        {"id", ssid},
+        {"type", QString("802-11-wireless")}};
+
+    connectionSettings["802-11-wireless"] = {
+        {"ssid", ssid.toUtf8()},
+        {"mode", QString("infrastructure")}};
+
+    if (!password.isEmpty())
+    {
+        connectionSettings["802-11-wireless-security"] = {
+            {"key-mgmt", QString("wpa-psk")},
+            {"psk", password}};
+    }
+
+    connectionSettings["ipv4"] = {{"method", QString("auto")}};
+    connectionSettings["ipv6"] = {{"method", QString("ignore")}};
+
+    QVariantMap outerMap;
+    for (auto it = connectionSettings.begin(); it != connectionSettings.end(); ++it)
+        outerMap.insert(it.key(), QVariant::fromValue(it.value()));
+
+    QDBusReply<QDBusObjectPath> reply = m_nm->call(
+        "AddAndActivateConnection",
+        QVariant::fromValue(outerMap),
+        QVariant::fromValue(QDBusObjectPath(m_wifiDevicePath)),
+        QVariant::fromValue(QDBusObjectPath(apPath)));
+
+    if (!reply.isValid())
+        qWarning() << "AddAndActivateConnection failed:" << reply.error().message();
+    else
+        qDebug() << "Connecting to" << ssid << "— active connection:" << reply.value().path();
+}
+
+QString WifiController::findSavedConnection(const QString &ssid)
+{
+    QDBusInterface settings(
+        NM::SETTINGS_SERVICE,
+        NM::SETTINGS_PATH,
+        NM::SETTINGS_INTERFACE,
+        m_bus);
+
+    QDBusReply<QList<QDBusObjectPath>> reply = settings.call(NM::FUNC_LIST_CONNS);
+    if (!reply.isValid())
+    {
+        qWarning() << "ListConnections failed:" << reply.error().message();
+        return {};
+    }
+
+    for (const QDBusObjectPath &connPath : reply.value())
+    {
+        QDBusInterface conn(
+            NM::SETTINGS_SERVICE,
+            connPath.path(),
+            NM::CONN_INTERFACE,
+            m_bus);
+
+        QDBusReply<QMap<QString, QVariantMap>> settingsReply = conn.call(NM::FUNC_GET_SETTINGS);
+        if (!settingsReply.isValid())
+            continue;
+
+        QMap<QString, QVariantMap> connSettings = settingsReply.value();
+
+        // Check the 802-11-wireless section for matching SSID
+        if (connSettings.contains("802-11-wireless"))
+        {
+            QByteArray savedSsid = connSettings["802-11-wireless"].value("ssid").toByteArray();
+            if (QString::fromUtf8(savedSsid) == ssid)
+                return connPath.path();
+        }
+    }
+
+    return {};
 }
