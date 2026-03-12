@@ -16,10 +16,6 @@ int main(int argc, char *argv[])
         { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    WifiController wifiController;
-
-    engine.rootContext()->setContextProperty("wifiController", &wifiController);
-
     engine.loadFromModule("t03_netman", "Main");
 
     return app.exec();
