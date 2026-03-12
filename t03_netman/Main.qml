@@ -7,7 +7,7 @@ Window {
     width: 640
     height: 480
     visible: true
-    title: qsTr("Hello World")
+    title: "Network Manager"
     Material.accent: Material.Blue
 
     WifiController {
@@ -15,12 +15,12 @@ Window {
     }
 
     Timer {
-        interval: 2000
+        interval: 5000
         repeat: true
         running: true
 
         onTriggered: {
-            if (true) {
+            if (wifiController.wifiEnabled) {
                 wifiController.scanNetworks();
             }
         }
