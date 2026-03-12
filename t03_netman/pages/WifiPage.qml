@@ -10,9 +10,10 @@ Rectangle {
 
         ProgressBar {
             id: busyIndicator
+            opacity: 0.9
             Layout.fillWidth: true
             indeterminate: true
-            visible: false
+            visible: wifiController.scanning
         }
 
         ListView {
