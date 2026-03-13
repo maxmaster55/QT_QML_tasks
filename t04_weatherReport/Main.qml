@@ -8,8 +8,5 @@ ApplicationWindow {
     visible: true
     title: qsTr("Weather Report")
 
-    Text {
-        anchors.centerIn: parent
-        text: "Hello World"
-    }
+
 }
