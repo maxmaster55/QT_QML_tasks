@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import t04_ledController
 
 ApplicationWindow {
     width: 400
@@ -11,7 +12,9 @@ ApplicationWindow {
     Material.theme: Material.Dark
     Material.accent: Material.Orange
 
-    property bool ledOn: false
+    PinController {
+        id: pinController
+    }
 
     ColumnLayout {
         anchors.centerIn: parent
@@ -22,7 +25,7 @@ ApplicationWindow {
             width: 80
             height: 80
             radius: 40
-            color: ledOn ? Material.color(Material.Orange) : "#333"
+            color: pinController.pinState ? Material.color(Material.Orange) : "#333"
             Behavior on color {
                 ColorAnimation {
                     duration: 300
@@ -32,15 +35,15 @@ ApplicationWindow {
 
         Label {
             Layout.alignment: Qt.AlignHCenter
-            text: ledOn ? "LED is ON" : "LED is OFF"
+            text: pinController.pinState ? "LED is ON" : "LED is OFF"
             font.pixelSize: 20
         }
 
-        Button {
+        Button {    
             Layout.alignment: Qt.AlignHCenter
-            text: ledOn ? "Turn Off" : "Turn On"
+            text: pinController.pinState ? "Turn Off" : "Turn On"
             highlighted: true
-            onClicked: ledOn = !ledOn
+            onClicked: pinController.pinState = !pinController.pinState
         }
     }
 }
