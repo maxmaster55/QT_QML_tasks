@@ -1,0 +1,9 @@
+T04_LEDCONTROLLER_VERSION = 1.0
+T04_LEDCONTROLLER_SITE = $(HOME)/ITI/qt_course/tasks/t04_ledController
+T04_LEDCONTROLLER_SITE_METHOD = local
+T04_LEDCONTROLLER_DEPENDENCIES = qt6base qt6declarative host-cmake
+
+T04_LEDCONTROLLER_CONF_OPTS = \
+    -DCMAKE_BUILD_TYPE=Release
+
+$(eval $(cmake-package))
