@@ -1,0 +1,5 @@
+config BR2_PACKAGE_T02_CALC
+    bool "t02_calc"
+    depends on BR2_PACKAGE_QT6BASE
+    help
+      Calculator Qt6 QML application.
