@@ -1,5 +1,5 @@
-config BR2_PACKAGE_T04_LEDCONTROLLER
-    bool "t04_ledcontroller"
+config BR2_PACKAGE_QT_LED_CONTROLLER
+    bool "qt_led_controller"
     depends on BR2_PACKAGE_QT6BASE
     help
       LED Controller Qt6 QML application.
