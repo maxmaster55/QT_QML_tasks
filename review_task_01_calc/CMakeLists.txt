@@ -3,11 +3,11 @@ cmake_minimum_required(VERSION 3.16)
 project(t02_calc VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick Qml)
 
 qt_standard_project_setup(REQUIRES 6.8)
-
 qt_add_executable(appt02_calc
     main.cpp
 )
@@ -16,7 +16,10 @@ qt_add_qml_module(appt02_calc
     URI t02_calc
     QML_FILES
         Main.qml
-        QML_FILES CalcButton.qml
+        CalcButton.qml
+    SOURCES
+        calc.h
+        calc.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -31,7 +34,7 @@ set_target_properties(appt02_calc PROPERTIES
 )
 
 target_link_libraries(appt02_calc
-    PRIVATE Qt6::Quick
+    PRIVATE Qt6::Quick Qt6::Qml
 )
 
 include(GNUInstallDirs)
