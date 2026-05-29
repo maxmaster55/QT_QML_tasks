@@ -28,6 +28,7 @@ qt_add_qml_module(appIVI
         pages/SettingsPage.qml
         pages/AppsPage.qml
         pages/HVACPage.qml
+        QML_FILES qml/components/VoiceOverlay.qml
 )
 
 set_target_properties(appIVI PROPERTIES
