@@ -16,7 +16,13 @@ qt_add_qml_module(appIVI
     URI IVI
     VERSION 1.0
     QML_FILES
-        Main.qml
+        qml/components/Main.qml
+        qml/components/VehicleStatusCard.qml
+        qml/components/MusicCard.qml
+        qml/components/ClimateCard.qml
+        qml/components/VoiceCard.qml
+        qml/components/Sidebar.qml
+        qml/components/GlassPanel.qml
 )
 
 set_target_properties(appIVI PROPERTIES
